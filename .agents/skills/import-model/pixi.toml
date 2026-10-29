@@ -1,0 +1,100 @@
+[workspace]
+name = "import-model"
+version = "0.1.0"
+channels = ["https://conda.modular.com/max-nightly", "conda-forge"]
+# MAX runs on CPU, NVIDIA and AMD GPUs, and Apple silicon GPUs without a CUDA
+# toolkit, so the default environment needs no CUDA either.
+platforms = ["linux-64", "linux-aarch64", "osx-arm64"]
+
+[dependencies]
+# Use slim `max` instead of the `modular` metapackage. `modular` pulls in
+# `max-pipelines`, which pins conda `transformers` to a single minor release
+# (`>=5.12.0,<5.13.0` on the 26.7 nightly). A new architecture can need a
+# later one. The `max-pipelines` runtime deps are listed below so `max serve`
+# runs without it.
+max = ">=26.3.0,<27"
+python = ">=3.12,<3.15"
+
+# Core HF / port toolchain
+huggingface_hub = ">=0.28.0"
+safetensors = ">=0.4"
+# PyTorch runs the HF reference model: on CPU, or on Apple silicon through
+# MPS. The `cuda` environment below swaps in the CUDA build.
+pytorch = ">=2.4"
+pydantic = ">=2.13.4,<3"
+
+# Script tests (`pixi run test-scripts`). ruff lints the generated ports.
+pytest = ">=8"
+ruff = "*"
+
+# Runtime deps that `max-pipelines` would normally provide. Listed manually so
+# `transformers` can come from PyPI without max-pipelines fighting the upper
+# bound. Each keeps the bounds `max-pipelines` declares (`pixi search
+# max-pipelines` lists them): `max serve` imports APIs that later releases
+# remove, such as `sse_starlette.sse.unpatch_uvicorn_signal_handler`.
+av = ">=14.0.0"
+click = "*"
+exceptiongroup = "*"
+gguf = ">=0.17.1"
+grpcio = ">=1.67.0"
+hf-transfer = ">=0.1.9"
+jinja2 = ">=3.1.0"
+jsonschema = ">=4.23.0"
+pillow = ">=12.3.0"
+psutil = "*"
+pydantic-settings = ">=2.7.1"
+pyyaml = ">=6.0.1"
+requests = ">=2.32.3"
+sentencepiece = ">=0.2.0"
+taskgroup = ">=0.2.2"
+tiktoken = ">=0.5.0"
+tqdm = ">=4.67.1"
+uvicorn = ">=0.34.0"
+uvloop = ">=0.21.0"
+aiofiles = ">=24.1.0"
+asgiref = ">=3.8.1"
+fastapi = ">=0.115.3"
+httpx = ">=0.28.1,<0.29"
+msgspec = "*"
+openai = ">=2.11.0"
+opentelemetry-api = ">=1.29.0"
+opentelemetry-exporter-otlp-proto-grpc = ">=1.27.0"
+opentelemetry-exporter-otlp-proto-http = ">=1.27.0"
+opentelemetry-exporter-prometheus = ">=0.50b0"
+opentelemetry-sdk = ">=1.29.0,<1.36.0"
+prometheus_client = ">=0.21.0"
+protobuf = ">=6.33.5,<6.34.0"
+pyinstrument = ">=5.0.1"
+python-json-logger = ">=2.0.7"
+pyzmq = ">=26.3.0"
+regex = ">=2024.11.6"
+scipy = ">=1.13.0"
+sse-starlette = ">=2.1.2,<2.2"
+starlette = ">=0.47.2"
+
+[pypi-dependencies]
+# Floor is 5.5.0, not 4.45: this skill loads checkpoints with
+# `trust_remote_code=True`, and versions below 5.5.0 are exposed to
+# CVE-2026-1839, CVE-2026-4372, and CVE-2026-5241 (RCE via `torch.load`,
+# a malicious `config.json`, and a `trust_remote_code` bypass).
+transformers = ">=5.5.0,<6"
+# The HF reference loads with `device_map="auto"`, which needs `accelerate`.
+accelerate = ">=0.30"
+
+[feature.cuda]
+platforms = ["linux-64", "linux-aarch64"]
+system-requirements = { cuda = "13" }
+
+[feature.cuda.dependencies]
+pytorch-gpu = ">=2.4"
+
+[environments]
+# `pixi run -e cuda ...` runs the HF reference on an NVIDIA GPU.
+cuda = ["cuda"]
+
+[tasks]
+test-scripts = { cwd = "scripts", cmd = "pytest test_scripts.py" }
+inspect = { cwd = "scripts", cmd = "python inspect_hf.py" }
+list-keys = { cwd = "scripts", cmd = "python list_checkpoint_keys.py" }
+list-archs = { cwd = "scripts", cmd = "python list_native_archs.py" }
+check-walls = { cwd = "scripts", cmd = "python check_walls.py" }
