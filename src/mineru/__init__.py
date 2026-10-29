@@ -1,2 +1,7 @@
-def main() -> None:
-    print("Hello from mineru!")
+from max.pipelines import SupportedArchitecture
+
+ARCHITECTURES = [
+    SupportedArchitecture(
+        name="",
+    )
+]
